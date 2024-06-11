@@ -1,98 +1,101 @@
-import React, { useState, useContext } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React, { useState, useContext, useEffect } from "react";
 import { UserContext } from "./UserContext";
+import { fetchUserProfile, uploadWorkout } from "./supabaseClient";
+import WorkoutConfirmationModal from "./WorkoutConfirmationModal";
 
 const EditWorkout = () => {
   const [workoutName, setWorkoutName] = useState("");
+  const [workoutNotes, setWorkoutNotes] = useState("");
   const [exercises, setExercises] = useState([]);
-  const { isImperial } = useContext(UserContext);
+  const { userProfile, isImperial } = useContext(UserContext);
+  const [workoutData, setWorkoutData] = useState(null);
 
   const handleWorkoutNameChange = (e) => {
     setWorkoutName(e.target.value);
   };
 
+  const handleWorkoutNotesChange = (e) => {
+    setWorkoutNotes(e.target.value);
+  };
+
   const handleAddExercise = () => {
     const newExercise = {
-      id: uuidv4(),
+      exerciseId: "",
       name: "",
-      sets: [{ reps: 1, weight: 0, time: 0, rpe: "" }],
+      sets: [{ reps: 1, weight: 0, time: 0, restTime: 0, rpe: "", notes: "" }],
     };
     setExercises([...exercises, newExercise]);
   };
 
-  const handleExerciseChange = (exerciseId, field, value) => {
-    const updatedExercises = exercises.map((exercise) => {
-      if (exercise.id === exerciseId) {
-        return { ...exercise, [field]: value };
-      }
-      return exercise;
-    });
+  const handleExerciseChange = (exerciseIndex, field, value) => {
+    const updatedExercises = [...exercises];
+    updatedExercises[exerciseIndex][field] = value;
     setExercises(updatedExercises);
   };
 
-  const handleAddSet = (exerciseId) => {
-    const updatedExercises = exercises.map((exercise) => {
-      if (exercise.id === exerciseId) {
-        const newSet = { reps: 1, weight: 0, time: 0, rpe: "" };
-        return { ...exercise, sets: [...exercise.sets, newSet] };
-      }
-      return exercise;
-    });
+  const handleAddSet = (exerciseIndex) => {
+    const updatedExercises = [...exercises];
+    const newSet = {
+      reps: 1,
+      weight: 0,
+      time: 0,
+      restTime: 0,
+      rpe: "",
+      notes: "",
+    };
+    updatedExercises[exerciseIndex].sets.push(newSet);
     setExercises(updatedExercises);
   };
 
-  const handleSetChange = (exerciseId, setIndex, field, value) => {
-    const updatedExercises = exercises.map((exercise) => {
-      if (exercise.id === exerciseId) {
-        const updatedSets = exercise.sets.map((set, index) => {
-          if (index === setIndex) {
-            return { ...set, [field]: value };
-          }
-          return set;
-        });
-        return { ...exercise, sets: updatedSets };
-      }
-      return exercise;
-    });
+  const handleSetChange = (exerciseIndex, setIndex, field, value) => {
+    const updatedExercises = [...exercises];
+    updatedExercises[exerciseIndex].sets[setIndex][field] = value;
     setExercises(updatedExercises);
   };
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   const handleSubmit = () => {
-    const workoutData = {
-      id: uuidv4(),
+    const newWorkoutData = {
+      user_id: userProfile?.id,
       name: workoutName,
+      notes: workoutNotes,
       exercises: exercises,
-      userId: "user123", // Replace with the actual user ID
-      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
-    // Send the workoutData to the server or perform any other necessary actions
-    console.log(workoutData);
-    // Reset the form
-    setWorkoutName("");
-    setExercises([]);
+    setWorkoutData(newWorkoutData);
+    setShowConfirmationModal(true);
   };
 
-  const handleDeleteExercise = (exerciseId) => {
+  const handleConfirmWorkout = async () => {
+    try {
+      await uploadWorkout(workoutData);
+      setShowConfirmationModal(false);
+      // Reset the form
+      setWorkoutName("");
+      setWorkoutNotes("");
+      setExercises([]);
+    } catch (error) {
+      console.error("Error saving workout:", error.message);
+    }
+  };
+
+  const handleDeleteExercise = (exerciseIndex) => {
     const updatedExercises = exercises.filter(
-      (exercise) => exercise.id !== exerciseId
+      (_, index) => index !== exerciseIndex
     );
     setExercises(updatedExercises);
   };
 
-  const handleDeleteSet = (exerciseId, setIndex) => {
-    const updatedExercises = exercises.map((exercise) => {
-      if (exercise.id === exerciseId) {
-        const updatedSets = exercise.sets.filter(
-          (_, index) => index !== setIndex
-        );
-        return { ...exercise, sets: updatedSets };
-      }
-      return exercise;
-    });
+  const handleDeleteSet = (exerciseIndex, setIndex) => {
+    const updatedExercises = [...exercises];
+    updatedExercises[exerciseIndex].sets = updatedExercises[
+      exerciseIndex
+    ].sets.filter((_, index) => index !== setIndex);
     setExercises(updatedExercises);
   };
 
   const weightUnit = isImperial ? "lbs" : "kg";
+
   return (
     <div>
       <h2>Workout Tracker</h2>
@@ -104,24 +107,42 @@ const EditWorkout = () => {
           onChange={handleWorkoutNameChange}
         />
       </label>
+      <label>
+        Workout Notes:
+        <textarea value={workoutNotes} onChange={handleWorkoutNotesChange} />
+      </label>
       <button onClick={handleAddExercise}>Add Exercise</button>
-      {exercises.map((exercise) => (
-        <div key={exercise.id}>
+      {exercises.map((exercise, exerciseIndex) => (
+        <div key={exerciseIndex}>
+          <label>
+            Exercise ID:
+            <input
+              type="text"
+              value={exercise.exerciseId}
+              onChange={(e) =>
+                handleExerciseChange(
+                  exerciseIndex,
+                  "exerciseId",
+                  e.target.value
+                )
+              }
+            />
+          </label>
           <label>
             Exercise Name:
             <input
               type="text"
               value={exercise.name}
               onChange={(e) =>
-                handleExerciseChange(exercise.id, "name", e.target.value)
+                handleExerciseChange(exerciseIndex, "name", e.target.value)
               }
             />
           </label>
-          <button onClick={() => handleDeleteExercise(exercise.id)}>
+          <button onClick={() => handleDeleteExercise(exerciseIndex)}>
             Delete Exercise
           </button>
-          {exercise.sets.map((set, index) => (
-            <div key={index}>
+          {exercise.sets.map((set, setIndex) => (
+            <div key={setIndex}>
               <label>
                 Reps:
                 <input
@@ -129,10 +150,10 @@ const EditWorkout = () => {
                   value={set.reps}
                   onChange={(e) =>
                     handleSetChange(
-                      exercise.id,
-                      index,
+                      exerciseIndex,
+                      setIndex,
                       "reps",
-                      parseInt(e.target.value)
+                      parseFloat(e.target.value)
                     )
                   }
                 />
@@ -144,8 +165,8 @@ const EditWorkout = () => {
                   value={set.weight}
                   onChange={(e) =>
                     handleSetChange(
-                      exercise.id,
-                      index,
+                      exerciseIndex,
+                      setIndex,
                       "weight",
                       parseFloat(e.target.value)
                     )
@@ -153,16 +174,31 @@ const EditWorkout = () => {
                 />
               </label>
               <label>
-                Time:
+                Duration:
                 <input
                   type="number"
                   value={set.time}
                   onChange={(e) =>
                     handleSetChange(
-                      exercise.id,
-                      index,
+                      exerciseIndex,
+                      setIndex,
                       "time",
-                      parseFloat(e.target.value)
+                      parseInt(e.target.value)
+                    )
+                  }
+                />
+              </label>
+              <label>
+                Rest Time:
+                <input
+                  type="number"
+                  value={set.restTime}
+                  onChange={(e) =>
+                    handleSetChange(
+                      exerciseIndex,
+                      setIndex,
+                      "restTime",
+                      parseInt(e.target.value)
                     )
                   }
                 />
@@ -170,22 +206,51 @@ const EditWorkout = () => {
               <label>
                 RPE:
                 <input
-                  type="text"
+                  type="number"
                   value={set.rpe}
                   onChange={(e) =>
-                    handleSetChange(exercise.id, index, "rpe", e.target.value)
+                    handleSetChange(
+                      exerciseIndex,
+                      setIndex,
+                      "rpe",
+                      parseInt(e.target.value)
+                    )
                   }
                 />
               </label>
-              <button onClick={() => handleDeleteSet(exercise.id, index)}>
+              <label>
+                Notes:
+                <input
+                  type="text"
+                  value={set.notes}
+                  onChange={(e) =>
+                    handleSetChange(
+                      exerciseIndex,
+                      setIndex,
+                      "notes",
+                      e.target.value
+                    )
+                  }
+                />
+              </label>
+              <button onClick={() => handleDeleteSet(exerciseIndex, setIndex)}>
                 Delete Set
               </button>
             </div>
           ))}
-          <button onClick={() => handleAddSet(exercise.id)}>Add Set</button>
+          <button onClick={() => handleAddSet(exerciseIndex)}>Add Set</button>
         </div>
       ))}
-      <button onClick={handleSubmit}>Save Workout</button>
+      <button onClick={handleSubmit} disabled={!userProfile}>
+        Save Workout
+      </button>
+      {showConfirmationModal && (
+        <WorkoutConfirmationModal
+          workout={workoutData}
+          onConfirm={handleConfirmWorkout}
+          onCancel={() => setShowConfirmationModal(false)}
+        />
+      )}
     </div>
   );
 };
