@@ -75,3 +75,23 @@ export const uploadWorkout = async (workoutData) => {
     throw error;
   }
 };
+
+
+export const updateUserProfile = async (profileData) => {
+  try {
+    const { data: updatedProfile, error } = await supabase
+      .from("user_profiles")
+      .update(profileData)
+      .eq("user_id", profileData.user_id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return updatedProfile;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};

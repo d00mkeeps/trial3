@@ -27,7 +27,7 @@ export const UserProvider = ({ children }) => {
   const isImperial = userProfile?.isImperial || false;
 
   return (
-    <UserContext.Provider value={{ userProfile, isImperial, isLoading, error }}>
+    <UserContext.Provider value={{ userProfile, setUserProfile, isImperial, isLoading, error }}>
       {children}
     </UserContext.Provider>
   );

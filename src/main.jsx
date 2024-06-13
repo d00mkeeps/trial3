@@ -13,6 +13,7 @@ import HomePage from "./homepage";
 import UserProfileComponent from "./profile/index";
 import ProfileContainer from "./profile/profilecontainer";
 import HomeContainer from "./HomeContainer";
+import EditProfile from "./profile/edit";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -23,6 +24,7 @@ const router = createBrowserRouter(
       </Route> */}
       <Route path="/profile" element={<ProfileContainer />}>
         {/* <Route path="/history" element={<WorkoutHistory />} /> */}
+        <Route path="/profile/edit" element={<EditProfile />} />
         <Route index element={<UserProfileComponent />} />
       </Route>
       <Route path="/editworkout" element={<EditWorkout />} />

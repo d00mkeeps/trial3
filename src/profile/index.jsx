@@ -1,6 +1,8 @@
 // index.jsx
 import React, { useContext } from "react";
 import { UserContext } from "../UserContext";
+import { Link } from "react-router-dom";
+
 
 const UserProfileComponent = () => {
   const { userProfile, isLoading, error } = useContext(UserContext);
@@ -29,6 +31,7 @@ const UserProfileComponent = () => {
           <p>Weight: {userProfile.weight} kg</p>
           <p>Created: {userProfile.created_at}</p>
           {/* Display other user profile fields */}
+          <Link to="/profile/edit">Edit Profile</Link>
         </div>
       ) : (
         <div>No user profile data found.</div>
